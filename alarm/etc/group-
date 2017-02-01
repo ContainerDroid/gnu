@@ -44,3 +44,9 @@ systemd-journal-remote:x:998:
 systemd-coredump:x:997:
 systemd-journal-upload:x:999:
 alarm:x:1000:
+git:x:996:
+aid_bt:x:3001:
+aid_bt_net:x:3002:
+aid_inet:x:3003:
+aid_net_raw:x:3004:
+aid_admin:x:3005:
