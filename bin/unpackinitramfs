@@ -1,0 +1,11 @@
+#!/bin/bash
+
+if [[ $# -lt 1 ]]; then
+	echo "Usage: $0 <input>"
+	exit
+fi
+input=$(realpath ${1})
+out_dir=${input%.gz}
+mkdir -p ${out_dir}
+cd ${out_dir}
+gunzip -cd ${input} | cpio -idmv --no-absolute-filenames

@@ -1,0 +1,38 @@
+#!/sbin/sh
+
+# initramfs pre-boot init script
+
+# Mount the /proc and /sys filesystems
+/sbin/mount -t tmpfs none /dev -o mode=0755,nosuid
+/sbin/mount -t sysfs none /sys -o nosuid,noexec,nodev
+/sbin/mount -t proc none /proc -o nosuid,noexec,nodev
+
+# Something (what?) needs a few cycles here
+/sbin/sleep 1
+
+# Populate /dev
+/sbin/mdev -s
+
+# Mount the root filesystem
+/sbin/mount -t ext4 -o noatime,nodiratime,errors=panic /dev/mmcblk0p28 /mnt
+/sbin/mount -o bind /mnt/gnu /root
+
+echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+
+# Clean up
+/sbin/umount /proc
+/sbin/umount /sys
+/sbin/umount /dev
+
+# Transfer root to SDcard
+exec /sbin/switch_root /root /init "$@"
