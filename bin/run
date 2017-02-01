@@ -1,5 +1,6 @@
 #!/bin/bash
 
+device='0b0a41d90297661a'
 cmdline='console=ttyHSL0,115200,n8 androidboot.hardware=hammerhead androidboot.selinux=permissive user_debug=31 msm_watchdog_v2.enable=1'
 bootimage='android-boot.img'
 #bootimage='recovery.img'
@@ -24,22 +25,11 @@ rm -rf gnu-initramfs.cpio.gz
 	--ramdisk gnu-initramfs.cpio.gz \
 	-o gnu-boot.img
 
-#mkbootimg \
-	#--base 0 \
-	#--pagesize 2048 \
-	#--kernel_offset 0x00008000 \
-	#--ramdisk_offset 0x2900000 \
-	#--second_offset 0x00f00000 \
-	#--cmdline "${cmdline}" \
-	#--kernel  android-boot/android-boot.img-zImage \
-	#--ramdisk gnu-initramfs.cpio.gz \
-	#-o gnu-boot.img
-
 #rsync -avr --progress --stats ${ramdisk_folder} rsync://localhost:6011/data/gnu/android/
-adb root && adb kill-server
+adb -s ${device} root && adb kill-server
 # XXX: rsync is really the thing to do here, not just pushing init
-adb push alarm/init /data/gnu/
-adb shell rm -rf /data/gnu/android/ && mkdir -p /data/gnu/android/
-adb push ${ramdisk_folder} /data/gnu/android/
-adb shell mkdir  /data/gnu/android/{dev,proc,sys}
-adb shell chmod -R 0500 /data/gnu/android/
+adb -s ${device} push alarm/init /data/gnu/
+adb -s ${device} shell rm -rf /data/gnu/android/ && mkdir -p /data/gnu/android/
+adb -s ${device} push ${ramdisk_folder} /data/gnu/android/
+adb -s ${device} shell mkdir  /data/gnu/android/{dev,proc,sys,system}
+adb -s ${device} shell chmod -R 0500 /data/gnu/android/
