@@ -1,0 +1,37 @@
+%NAME%
+man-pages
+
+%VERSION%
+4.09-1
+
+%DESC%
+Linux man pages
+
+%URL%
+http://man7.org/linux/man-pages/index.html
+
+%ARCH%
+any
+
+%BUILDDATE%
+1481992205
+
+%INSTALLDATE%
+1483300258
+
+%PACKAGER%
+Arch Linux ARM Build System <builder+xu9@archlinuxarm.org>
+
+%SIZE%
+5874688
+
+%GROUPS%
+base
+
+%LICENSE%
+GPL
+custom
+
+%VALIDATION%
+sha256
+

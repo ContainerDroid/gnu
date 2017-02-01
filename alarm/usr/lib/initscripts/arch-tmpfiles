@@ -1,0 +1,435 @@
+#!/bin/bash
+#
+# /usr/lib/initscripts/arch-tmpfiles
+#
+# Control creation, deletion, and cleaning of volatile and temporary files
+#
+
+warninvalid() {
+	local description=$1 file=${2:-${files[$TOTALNUM]}} linenum=${3:-${linenums[$TOTALNUM]}}
+
+	printf "%s:line %d: ignoring invalid entry: %s\n" "$file" "$linenum" "$description"
+	(( ++error ))
+} >&2
+
+checkparams() {
+	shift
+	local path=$1 mode=$2 uid=$3 gid=$4 age=$5
+
+	# mode must be valid octal and 3 or 4 digits
+	if [[ $mode != '-' ]]; then
+		if [[ ! $mode =~ ^[0-7]{3,4}$ ]]; then
+			warninvalid "invalid mode '$mode'"
+			return 1
+		fi
+	fi
+
+	# uid must be numeric or a valid user name
+	# don't try to resolve numeric IDs in case they don't exist
+	if [[ $uid != '-' ]]; then
+		if [[ $uid != +([0-9]) ]] && ! getent passwd "$uid" >/dev/null; then
+			warninvalid "unknown user '$uid'"
+			return 1
+		fi
+	fi
+
+	# gid must be numeric or a valid group name
+	# don't try to resolve numeric IDs in case they don't exist
+	if [[ $gid != '-' ]]; then
+		if [[ $gid != +([0-9]) ]] && ! getent group "$gid" >/dev/null; then
+			warninvalid "unknown group '$gid'"
+			return 1
+		fi
+	fi
+
+	# age must be list of numerics separated by the following postfixes:
+	# s, sec, m, min, h, d, w
+	# also it can be prefixed by '~'
+	if [[ $age != '-' ]]; then
+		if [[ ! $age =~ ^~?([0-9]+(s|sec|m|min|h|d|w)?)+$ ]]; then
+			warninvalid "invalid age '$age'"
+			return 1
+		fi
+	fi
+
+	return 0
+}
+
+relabel() {
+	local -a paths=($1)
+	local mode=$2 uid=$3 gid=$4
+
+	for path in "${paths[@]}"; do
+		if [[ -e $path ]]; then
+			[[ $uid != '-' ]] && chown $CHOPTS "$uid" "$path"
+			[[ $gid != '-' ]] && chgrp $CHOPTS "$gid" "$path"
+			[[ $mode != '-' ]] && chmod $CHOPTS "$mode" "$path"
+		fi
+	done
+
+	return 0
+}
+
+parse_age() {
+	local seconds=0
+	local numbers=(${1//[^0-9]/ })
+	local units=(${1//[0-9]/ })
+
+	for (( i = 0; i < ${#numbers[@]}; i++ )); do
+		if [ "${units[i]}" == "m" ] || [ "${units[i]}" == "min" ]; then
+			(( seconds += numbers[i] * 60 ))
+		elif [ "${units[i]}" == "h" ]; then
+			(( seconds += numbers[i] * 3600 ))
+		elif [ "${units[i]}" == "d" ]; then
+			(( seconds += numbers[i] * 86400 ))
+		elif [ "${units[i]}" == "w" ]; then
+			(( seconds += numbers[i] * 604800 ))
+		else
+			(( seconds += numbers[i] ))
+		fi
+	done
+
+	echo $seconds
+}
+
+in_list() {
+	local search=$1
+
+	for item in "${EXCLUDE_LIST[@]}"; do
+		[[ "$search" == $item ]] && return 0
+	done
+
+	return 1
+}
+
+cleanup_dir() {
+	local path=$1 age=$2
+	local depth=1
+
+	# keep first level
+	if [[ ${age:0:1} == '~' ]]; then
+		depth=2
+		age=${age#'~'}
+	fi
+
+	local age=$(parse_age $age)
+	local current_time=$(date +%s)
+
+	while read -d '' file; do
+		# don't try to remove directories which still contains some files
+		[[ -d "$file" && $(ls -A "$file") ]] && continue
+
+		local mod_time=$(stat -c %Y "$file")
+		if (( (current_time - mod_time) > age )); then
+			! in_list "$file" && rm -fd "$file"
+		fi
+	done < <(find -P "$path" -mindepth $depth -depth -xdev -print0)
+}
+
+_f() {
+	# Create a file if it doesn't exist yet
+	local path=$1 mode=$2 uid=$3 gid=$4
+
+	if [[ ! -e $path ]]; then
+		install -m"$mode" -o"$uid" -g"$gid" /dev/null "$path"
+	fi
+}
+
+_F() {
+	# Create or truncate a file
+	local path=$1 mode=$2 uid=$3 gid=$4
+
+	install -m"$mode" -o"$uid" -g"$gid" /dev/null "$path"
+}
+
+_d() {
+	# Create a directory if it doesn't exist yet
+	local path=$1 mode=$2 uid=$3 gid=$4 age=$5
+
+	if (( CLEAN )); then
+		if [[ $age != '-' ]] && [[ -d "$path" ]]; then
+			cleanup_dir "$path" "$age"
+		fi
+	fi
+
+	if (( CREATE )); then
+		if [[ ! -d "$path" ]]; then
+			install -d -m"$mode" -o"$uid" -g"$gid" "$path"
+		fi
+	fi
+}
+
+_D() {
+	# Create or empty a directory
+	local path=$1 mode=$2 uid=$3 gid=$4
+
+	if [[ -d $path ]] && (( REMOVE )); then
+		find "$path" -mindepth 1 -maxdepth 1 -xdev -exec rm -rf {} +
+	fi
+
+	_d "$@"
+}
+
+_p() {
+	# Create a named pipe (FIFO) if it doesn't exist yet
+	local path=$1 mode=$2 uid=$3 gid=$4
+
+	if [[ ! -p "$path" ]]; then
+		mkfifo -m$mode "$path"
+		chown "$uid:$gid" "$path"
+	fi
+}
+
+_x() {
+	# Ignore a path during cleaning. Use this type to exclude paths from clean-up as
+	# controlled with the Age parameter. Note that lines of this type do not
+	# influence the effect of r or R lines. Lines of this type accept shell-style
+	# globs in place of of normal path names.
+	local path=$1
+
+	EXCLUDE_LIST+=("$path*(/*)")
+}
+
+_X() {
+	# Ignore a path during cleanup. Use this type to prevent path removal as controlled
+	# with the Age parameter. Note that if path is a directory, content of a directory is not
+	# excluded from clean-up, only directory itself. Lines of this type accept
+	# shell-style globs in place of normal path names.
+	local path=$1
+
+	EXCLUDE_LIST+=("$path")
+}
+
+_r() {
+	# Remove a file or directory if it exists. This may not be used to remove
+	# non-empty directories, use R for that. Lines of this type accept shell-style
+	# globs in place of normal path names.
+	local path
+	local -a paths=($1)
+
+	for path in "${paths[@]}"; do
+		if [[ -f $path ]]; then
+			rm -f "$path"
+		elif [[ -d $path ]]; then
+			rmdir "$path"
+		fi
+	done
+}
+
+_R() {
+	# Recursively remove a path and all its subdirectories (if it is a directory).
+	# Lines of this type accept shell-style globs in place of normal path names.
+	local path
+	local -a paths=($1)
+
+	for path in "${paths[@]}"; do
+		[[ -d $path ]] && rm -rf --one-file-system "$path"
+	done
+}
+
+_z() {
+	# Set ownership, access mode and relabel security context of a file or
+	# directory if it exists. Lines of this type accept shell-style globs in
+	# place of normal path names.
+	local -a paths=($1)
+	local mode=$2 uid=$3 gid=$4
+
+	relabel "$@"
+}
+
+_Z() {
+	# Recursively set ownership, access mode and relabel security context of a
+	# path and all its subdirectories (if it is a directory). Lines of this type
+	# accept shell-style globs in place of normal path names.
+
+	CHOPTS=-R relabel "$@"
+}
+
+_m() {
+	# If the specified file path exists, adjust its access mode, group and user to
+	# the specified values. If it does not exist, do nothing.
+
+	relabel "$@"
+}
+
+_w() {
+	# Write the argument parameter to a file, if the file exists. Lines of this
+	# type accept shell-style globs in place of normal path names. The argument
+	# parameter will be written without a trailing newline.
+	local path
+	local -a paths=($1)
+	local argument="$6"
+
+	for path in "${paths[@]}"; do
+		[[ -f $path ]] && echo -n "$argument" > "$path"
+	done
+}
+
+_L() {
+	# Create a symlink if it does not exist yet.
+	local path=$1 source=$6
+
+	if [[ ! -e "$path" && -e "$source" ]]; then
+		ln -s "$source" "$path"
+	fi
+}
+
+_L+() {
+	# Create a symlink if it does not exist yet. If a file already exists where the symlink is to be created, it will be removed and be replaced by the symlink.
+	local path=$1 source=$6
+
+	if [[ -e "$source" ]]; then
+		ln -sf "$source" "$path"
+	fi
+}
+
+process_lines ()
+{
+	local actions="$1"
+
+	TOTALNUM=0
+	while read -a line; do
+		(( ++TOTALNUM ))
+
+		[[ "${line[0]:0:1}" != $actions ]] && continue
+
+		# fill empty parameters
+		[[ "${line[2]}" ]] || line[2]='-'
+		[[ "${line[3]}" ]] || line[3]='-'
+		[[ "${line[4]}" ]] || line[4]='-'
+		[[ "${line[5]}" ]] || line[5]='-'
+
+		# skip invalid entries
+		if ! checkparams "${line[@]}"; then
+			continue
+		fi
+
+		# fall back on defaults when parameters are passed as '-'
+		if [[ ${line[2]} = '-' ]]; then
+			case ${line[0]} in
+				p|f|F) line[2]=0644 ;;
+				d|D) line[2]=0755 ;;
+			esac
+		fi
+
+		if [[ "${line[0]}" = [pfFdD] ]]; then
+			[[ ${line[3]} = '-' ]] && line[3]='root'
+			[[ ${line[4]} = '-' ]] && line[4]='root'
+		fi
+
+		"_${line[@]}"
+	done < <(printf '%s\n' "${lines[@]}")
+}
+
+shopt -s nullglob
+shopt -s extglob
+
+declare -i CREATE=0 REMOVE=0 CLEAN=0 ONBOOT=0
+declare -i error=0 LINENUM=0 TOTALNUM=0
+declare FILE=
+declare -A fragments
+declare -a tmpfiles_d=(
+	/usr/lib/tmpfiles.d/*.conf
+	/etc/tmpfiles.d/*.conf
+	/run/tmpfiles.d/*.conf
+)
+declare -a EXCLUDE_LIST lines linenums files
+
+while (( $# )); do
+	case $1 in
+		--create) CREATE=1 ;;
+		--remove) REMOVE=1 ;;
+		--clean) CLEAN=1 ;;
+		--boot) ONBOOT=1 ;;
+		*) break ;;
+	esac
+	shift
+done
+
+if (( !(CREATE + REMOVE + CLEAN) )); then
+	printf 'usage: %s [--create] [--remove] [--clean] [--boot] [FILES...]\n' "${0##*/}"
+	exit 1
+fi
+
+# directories declared later in the tmpfiles_d array will override earlier
+# directories, on a per file basis.
+# Example: `/etc/tmpfiles.d/foo.conf' supersedes `/usr/lib/tmpfiles.d/foo.conf'.
+for path in "${tmpfiles_d[@]}"; do
+	[[ -f $path ]] && fragments[${path##*/}]=${path%/*}
+done
+
+# catch errors in functions so we can exit with something meaningful
+set -E
+trap '(( ++error ))' ERR
+
+# loop through the gathered fragments, sorted globally by filename.
+# `/run/tmpfiles/foo.conf' will always be read after `/etc/tmpfiles.d/bar.conf'
+while read -d '' fragment; do
+	LINENUM=0
+
+	# make sure that a fragment contains only a base filename
+	if [[ "$fragment" = /* ]] && [[ -f "$fragment" ]]; then
+		fragments[${fragment##*/}]=${fragment%/*}
+		fragment=${fragment##*/}
+	fi
+
+	if [[ -z ${fragments[$fragment]} ]]; then
+		printf 'warning: %s does not found\n' "$fragment"
+		continue
+	fi
+
+	printf -v FILE '%s/%s' "${fragments[$fragment]}" "$fragment"
+
+	### FILE FORMAT ###
+	# 0    1              2    3    4    5
+	# Type Path           Mode UID  GID  Age
+	# d    /run/user      0755 root root 10d
+
+	# omit read's -r flag to honor escapes here, so that whitespace can be
+	# escaped for paths. We will _not_ honor quoted paths. Also make sure that
+	# last line will be processed even if it does not contain terminating '\n'.
+	while read -a line || [[ -n "${line[@]}" ]]; do
+		(( ++LINENUM ))
+
+		# skip over comments and empty lines
+		if (( ! ${#line[*]} )) || [[ ${line[0]:0:1} = '#' ]]; then
+			continue
+		fi
+
+		# process the lines with unsafe operation marker only if --boot option is
+		# specified
+		if [[ "${line[0]}" == *! ]]; then
+			(( ONBOOT )) || continue
+
+			line[0]=${line[0]%!}
+		fi
+
+		# whine about invalid entries
+		if ! type -t _${line[0]} >/dev/null; then
+			warninvalid "unknown action '${line[0]}'" "$FILE" "$LINENUM"
+			continue
+		fi
+
+		# path cannot be empty
+		if [[ -z "${line[1]}" ]]; then
+			warninvalid "missed path" "$FILE" "$LINENUM"
+			continue
+		fi
+
+		(( ++TOTALNUM ))
+		lines[$TOTALNUM]="${line[@]}"
+		linenums[$TOTALNUM]=$LINENUM
+		files[$TOTALNUM]="$FILE"
+	done <"$FILE"
+done < <(printf '%s\0' "${@:-${!fragments[@]}}" | sort -z)
+
+# Fill exclude list first
+(( CLEAN )) && process_lines "[xX]"
+
+process_lines "[dD]"
+(( CREATE )) && process_lines "[fFpzZmwL]"
+(( REMOVE )) && process_lines "[rR]"
+
+exit $error
+
+# vim: set ts=2 sw=2 noet:

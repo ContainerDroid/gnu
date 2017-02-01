@@ -1,0 +1,36 @@
+%NAME%
+tzdata
+
+%VERSION%
+2016j-1
+
+%DESC%
+Sources for time zone and daylight saving time data
+
+%URL%
+http://www.iana.org/time-zones
+
+%ARCH%
+any
+
+%BUILDDATE%
+1480152967
+
+%INSTALLDATE%
+1483300238
+
+%PACKAGER%
+Arch Linux ARM Build System <builder+xu6@archlinuxarm.org>
+
+%SIZE%
+1894400
+
+%REASON%
+1
+
+%LICENSE%
+GPL
+
+%VALIDATION%
+sha256
+

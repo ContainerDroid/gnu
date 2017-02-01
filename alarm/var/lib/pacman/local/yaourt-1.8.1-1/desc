@@ -1,0 +1,44 @@
+%NAME%
+yaourt
+
+%VERSION%
+1.8.1-1
+
+%DESC%
+A pacman wrapper with extended features and AUR support
+
+%URL%
+https://github.com/archlinuxfr/yaourt
+
+%ARCH%
+any
+
+%BUILDDATE%
+1485471247
+
+%INSTALLDATE%
+1485471276
+
+%PACKAGER%
+Unknown Packager
+
+%SIZE%
+807936
+
+%LICENSE%
+GPL
+
+%VALIDATION%
+none
+
+%DEPENDS%
+diffutils
+pacman>=5.0
+package-query>=1.8
+gettext
+
+%OPTDEPENDS%
+aurvote: vote for favorite packages from AUR
+customizepkg: automatically modify PKGBUILD during install/upgrade
+rsync: retrieve PKGBUILD from official repositories
+

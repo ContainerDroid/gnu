@@ -1,0 +1,47 @@
+%NAME%
+glib2
+
+%VERSION%
+2.50.2-1
+
+%BASE%
+glib2
+
+%DESC%
+Low level core library
+
+%URL%
+http://www.gtk.org/
+
+%ARCH%
+armv7h
+
+%BUILDDATE%
+1479561979
+
+%INSTALLDATE%
+1483300254
+
+%PACKAGER%
+Arch Linux ARM Build System <builder+xu6@archlinuxarm.org>
+
+%SIZE%
+14406656
+
+%REASON%
+1
+
+%LICENSE%
+LGPL
+
+%VALIDATION%
+sha256
+
+%DEPENDS%
+pcre
+libffi
+
+%OPTDEPENDS%
+python: for gdbus-codegen and gtester-report
+libelf: gresource inspection tool
+

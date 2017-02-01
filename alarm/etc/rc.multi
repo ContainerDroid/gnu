@@ -1,0 +1,34 @@
+#!/bin/bash
+#
+# /etc/rc.multi
+#
+
+. /etc/rc.conf
+. /etc/rc.d/functions
+
+run_hook multi_start
+
+# Load sysctl config files
+status "Configuring kernel parameters" sysctl -q --system
+
+# Load additional binary formats
+status "Configure additional binary formats" /usr/lib/initscripts/arch-binfmt
+
+# Start daemons
+for daemon in "${DAEMONS[@]}"; do
+	case ${daemon:0:1} in
+		'!') continue;;     # Skip this daemon.
+		'@') start_daemon_bkgd "${daemon#@}";;
+		*)   start_daemon "$daemon";;
+	esac
+done
+
+[[ -x /etc/rc.local ]] && /etc/rc.local
+
+run_hook multi_end
+
+bootlogd_stop
+
+rm -f /run/nologin
+
+# vim: set ts=2 sw=2 noet:

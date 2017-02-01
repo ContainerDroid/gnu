@@ -1,0 +1,37 @@
+%NAME%
+package-query
+
+%VERSION%
+1.8-2
+
+%DESC%
+Query ALPM and AUR
+
+%URL%
+https://github.com/archlinuxfr/package-query/
+
+%ARCH%
+armv7h
+
+%BUILDDATE%
+1485471115
+
+%INSTALLDATE%
+1485471211
+
+%PACKAGER%
+Unknown Packager
+
+%SIZE%
+75776
+
+%LICENSE%
+GPL
+
+%VALIDATION%
+none
+
+%DEPENDS%
+pacman>=5.0
+yajl>=2.0
+

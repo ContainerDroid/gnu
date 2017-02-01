@@ -1,0 +1,37 @@
+%NAME%
+screen
+
+%VERSION%
+4.5.0-2
+
+%DESC%
+Full-screen window manager that multiplexes a physical terminal
+
+%URL%
+https://www.gnu.org/software/screen/
+
+%ARCH%
+armv7h
+
+%BUILDDATE%
+1485336443
+
+%INSTALLDATE%
+1485778129
+
+%PACKAGER%
+Arch Linux ARM Build System <builder+xu6@archlinuxarm.org>
+
+%SIZE%
+850944
+
+%LICENSE%
+GPL
+
+%VALIDATION%
+sha256
+
+%DEPENDS%
+ncurses
+pam
+

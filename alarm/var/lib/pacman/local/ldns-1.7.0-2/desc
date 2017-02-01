@@ -1,0 +1,43 @@
+%NAME%
+ldns
+
+%VERSION%
+1.7.0-2
+
+%DESC%
+Fast DNS library supporting recent RFCs
+
+%URL%
+https://www.nlnetlabs.nl/projects/ldns/
+
+%ARCH%
+armv7h
+
+%BUILDDATE%
+1484958831
+
+%INSTALLDATE%
+1485470039
+
+%PACKAGER%
+Arch Linux ARM Build System <builder+xu8@archlinuxarm.org>
+
+%SIZE%
+1730560
+
+%REASON%
+1
+
+%LICENSE%
+custom:BSD
+
+%VALIDATION%
+sha256
+
+%DEPENDS%
+openssl
+dnssec-anchors
+
+%OPTDEPENDS%
+libpcap: ldns-dpa tool
+

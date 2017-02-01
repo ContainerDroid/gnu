@@ -1,0 +1,33 @@
+%NAME%
+yajl
+
+%VERSION%
+2.1.0-1
+
+%DESC%
+Yet Another JSON Library
+
+%URL%
+http://lloyd.github.com/yajl/
+
+%ARCH%
+armv7h
+
+%BUILDDATE%
+1396294550
+
+%INSTALLDATE%
+1485471007
+
+%PACKAGER%
+Arch Linux ARM Build System <builder+odroid1@archlinuxarm.org>
+
+%SIZE%
+145408
+
+%LICENSE%
+ISC
+
+%VALIDATION%
+sha256
+

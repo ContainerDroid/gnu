@@ -1,0 +1,64 @@
+%NAME%
+initscripts-fork
+
+%VERSION%
+2014.09.1-1
+
+%DESC%
+Maintained fork of system initialization/bootup scripts
+
+%URL%
+https://bitbucket.org/TZ86/initscripts-fork/overview
+
+%ARCH%
+any
+
+%BUILDDATE%
+1485475475
+
+%INSTALLDATE%
+1485475493
+
+%PACKAGER%
+Unknown Packager
+
+%SIZE%
+172032
+
+%LICENSE%
+GPL2
+
+%VALIDATION%
+none
+
+%REPLACES%
+initscripts-systemd
+initscripts
+
+%DEPENDS%
+glibc
+bash
+coreutils
+iproute2
+ncurses
+findutils
+sysvinit
+procps-ng
+kbd
+
+%OPTDEPENDS%
+dhcpcd: DHCP network configuration
+bridge-utils: Network bridging support
+net-tools: Network support
+wireless_tools: Wireless networking
+systemd: new crypttab format support
+sysctl-default-conf: additional tweaks for kernel parameters
+
+%CONFLICTS%
+initscripts-systemd
+initscripts
+
+%PROVIDES%
+initscripts-systemd
+initscripts
+

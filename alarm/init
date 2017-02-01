@@ -1,0 +1,44 @@
+#!/bin/bash
+
+LD_LIBRARY_PATH='.:/sbin' PATH='/sbin:/system/bin' chroot /android /init &
+
+#
+# Delayed Debian environment boot init script
+# Not really init (not pid 1) but a fork of it.
+# The real init is right now executing in Android chroot
+#
+
+echo "`date` Debian init stage2 started"
+
+# Wait for Android init to set up everything
+# wait for dev to be mounted by Android init
+echo "`date` Waiting on Android to mount /dev"
+while [ ! -e /android/dev/.coldboot_done ]; do
+	sleep 1
+done
+# wait for Android init to signal all done
+echo "`date` Waiting on Android init to finish"
+while [ -e /android/dev/.booting ]; do
+	sleep 1
+done
+
+# Mount the /proc, /sys etc filesystems
+echo "`date` Mounting /proc /sys and /dev"
+mount -t proc none /proc
+mount -t sysfs none /sys
+
+# Mount /dev from the Android world
+mount -o bind /android/dev /dev
+mount -o bind /android/dev/pts /dev/pts
+mount -o bind /android/dev/socket /dev/socket
+ln -s /proc/self/fd /dev/fd
+
+mount -t ext4 /dev/block/platform/msm_sdcc.1/by-name/persist /android/persist/
+mount -t ext4 /dev/block/platform/msm_sdcc.1/by-name/system /android/system/
+LD_LIBRARY_PATH='.:/sbin' PATH='/sbin:/system/bin' chroot /android ln -s /system/vendor/ /vendor
+LD_LIBRARY_PATH='.:/sbin' PATH='/sbin:/system/bin' chroot /android cp -r /system/etc/wifi/ /etc/
+LD_LIBRARY_PATH='.:/sbin' PATH='/sbin:/system/bin' chroot /android ip link set dev wlan0 up
+
+# All done, now we can start stuff
+exec /sbin/init $@
+#exec /lib/systemd/systemd --crash-shell
