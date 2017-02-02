@@ -2,16 +2,20 @@
 
 device='0b0a41d90297661a'
 cmdline='console=ttyHSL0,115200,n8 androidboot.hardware=hammerhead androidboot.selinux=permissive user_debug=31 msm_watchdog_v2.enable=1'
-bootimage='android-boot.img'
-#bootimage='recovery.img'
+#bootimage='android-boot.img'
+bootimage='recovery.img'
+rootfs='alarm'
+
 bootimage_folder=${bootimage%.img}
 kernel=${bootimage_folder}/${bootimage}-zImage
 ramdisk=${bootimage%.img}/${bootimage}-ramdisk.gz
 ramdisk_folder=${ramdisk%.gz}
 
+# Clean up, make sure we're starting fresh
 rm -rf ${bootimage_folder} && mkdir -p ${bootimage_folder}
 rm -rf gnu-initramfs.cpio.gz
 
+# Prepare gnu-boot.img using kernel from ${bootimage} and gnu-initramfs
 ./bin/unpackbootimg -i ${bootimage} -o ${bootimage_folder}
 ./bin/unpackinitramfs ${ramdisk}
 ./bin/mkinitramfs gnu-initramfs
@@ -25,11 +29,15 @@ rm -rf gnu-initramfs.cpio.gz
 	--ramdisk gnu-initramfs.cpio.gz \
 	-o gnu-boot.img
 
-#rsync -avr --progress --stats ${ramdisk_folder} rsync://localhost:6011/data/gnu/android/
-adb -s ${device} root && adb kill-server
-# XXX: rsync is really the thing to do here, not just pushing init
-adb -s ${device} push alarm/init /data/gnu/
-adb -s ${device} shell rm -rf /data/gnu/android/ && mkdir -p /data/gnu/android/
-adb -s ${device} push ${ramdisk_folder} /data/gnu/android/
-adb -s ${device} shell mkdir  /data/gnu/android/{dev,proc,sys,system}
-adb -s ${device} shell chmod -R 0500 /data/gnu/android/
+# Start copying files over adb
+./bin/adb-setup ${device}
+adb -s ${device} shell mkdir -p /data/gnu/
+rsync -avr --progress --stats ${rootfs} rsync://localhost:1337/data/gnu/
+rsync -avr --progress --stats ${ramdisk_folder} rsync://localhost:1337/data/gnu/android/
+#adb -s ${device} push alarm/init /data/gnu/
+#adb -s ${device} shell rm -rf /data/gnu/android/ && mkdir -p /data/gnu/android/
+#adb -s ${device} push ${ramdisk_folder} /data/gnu/android/
+#adb -s ${device} shell mkdir  /data/gnu/android/{dev,proc,sys,system}
+#adb -s ${device} shell chmod -R 0500 /data/gnu/android/
+#adb -s ${device} shell chmod -R 0755 /data/gnu/system/
+#adb -s ${device} shell chown -R root /data/gnu/system

@@ -1,9 +1,25 @@
 #!/bin/bash
 
-adb kill-server
-adb root
-adb wait-for-device
-adb push bin/rsyncd.conf /sdcard/
-adb shell killall rsync
-adb shell rsync --daemon --no-detach --config=/sdcard/rsyncd.conf --log-file=/proc/self/fd/2 &
-adb forward tcp:6011 tcp:1874
+if [[ $# -lt 1 ]]; then
+	echo "Usage: $0 <device-name>"
+	exit
+fi
+
+device=$1
+
+adb -s ${device} root
+adb -s ${device} shell mkdir -p /tmp/bin /tmp/etc
+adb -s ${device} push bin/linker /tmp/bin/
+adb -s ${device} push bin/rsync  /tmp/bin/
+adb -s ${device} push bin/rsyncd.conf /tmp/etc/
+adb -s ${device} shell chmod +x /tmp/bin/rsync
+#adb -s ${device} shell "export LD_LIBRARY_PATH=/tmp/bin:; " \
+	#"/tmp/bin/rsync " \
+	#"--daemon " \
+	#"--no-detach " \
+	#"--config=/tmp/etc/rsyncd.conf " \
+	#"--log-file=/proc/self/fd/2 "
+adb -s ${device} shell "export LD_LIBRARY_PATH=/tmp/bin:; /tmp/bin/rsync --daemon --no-detach --config=/tmp/etc/rsyncd.conf --log-file=/proc/self/fd/2 "
+echo "ehlo"
+
+adb -s ${device} forward tcp:1337 tcp:1337
